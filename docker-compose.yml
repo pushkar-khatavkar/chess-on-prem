@@ -1,0 +1,116 @@
+services:
+  mongo:
+    image: mongo:7
+    container_name: chess64-mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo64:/data/db
+
+  redis:
+    image: redis:7-alpine
+    container_name: chess64-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+
+  server-main:
+    build:
+      context: ./server
+    container_name: chess64-server-main
+    restart: unless-stopped
+    env_file:
+      - ./server/.env
+    environment:
+      PORT: "8080"
+      FRONTEND_URL: "http://localhost:5173"
+      MONGODB_URL: "mongodb://mongo:27017/64"
+      REDIS_URL: "redis://redis:6379"
+    command: npm run start:main
+    depends_on:
+      - mongo
+      - redis
+    ports:
+      - "8080:8080"
+
+  server-ws:
+    build:
+      context: ./server
+    container_name: chess64-server-ws
+    restart: unless-stopped
+    env_file:
+      - ./server/.env
+    environment:
+      PORT: "9090"
+      FRONTEND_URL: "http://localhost:5173"
+      MONGODB_URL: "mongodb://mongo:27017/64"
+      REDIS_URL: "redis://redis:6379"
+    command: npm run start:ws
+    depends_on:
+      - mongo
+      - redis
+    ports:
+      - "9090:9090"
+
+  server-stockfish:
+    build:
+      context: ./server
+    container_name: chess64-server-stockfish
+    restart: unless-stopped
+    env_file:
+      - ./server/.env
+    environment:
+      PORT: "8081"
+      FRONTEND_URL: "http://localhost:5173"
+      MONGODB_URL: "mongodb://mongo:27017/64"
+      REDIS_URL: "redis://redis:6379"
+      # Optional override if you want a specific Stockfish binary:
+      # STOCKFISH_PATH: "/usr/games/stockfish"
+    command: npm run start:stockfish
+    depends_on:
+      - mongo
+      - redis
+    ports:
+      - "8081:8081"
+
+  server-dbupdates:
+    build:
+      context: ./server
+    container_name: chess64-server-dbupdates
+    restart: unless-stopped
+    env_file:
+      - ./server/.env
+    environment:
+      FRONTEND_URL: "http://localhost:5173"
+      MONGODB_URL: "mongodb://mongo:27017/64"
+      REDIS_URL: "redis://redis:6379"
+    command: npm run start:microservice:dbupdates
+    depends_on:
+      - mongo
+      - redis
+    ports:
+      - "9191:9191"
+
+  client:
+    build:
+      context: ./client
+    container_name: chess64-client
+    restart: unless-stopped
+    env_file:
+      - ./client/.env
+    environment:
+      VITE_API_URL: "http://localhost:8080"
+      VITE_GAME_SERVER_API_URL: "http://localhost:9090"
+      VITE_STOCKFISH_SERVER_API_URL: "http://localhost:8081"
+    command: npm run dev -- --host 0.0.0.0 --port 5173
+    depends_on:
+      - server-main
+      - server-ws
+      - server-stockfish
+      - server-dbupdates
+    ports:
+      - "5173:5173"
+
+volumes:
+  mongo64:
