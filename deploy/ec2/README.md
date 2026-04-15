@@ -4,8 +4,8 @@ This repo currently runs via `docker-compose.yml`. If you want to split services
 
 ## Recommended EC2 split
 
-- **DB EC2**: `mongo`, `redis`
-- **Backend EC2**: `server-main`, `server-ws`, `server-stockfish`, `server-dbupdates`
+- **DB EC2**: `mongo`
+- **Backend EC2**: `redis`, `server-main`, `server-ws`, `server-stockfish`, `server-dbupdates`
 - **Frontend EC2**: `client` (Vite dev server on `5173`)
 
 All containers can share one env file (same contents everywhere), e.g. `/opt/chess64/app.env`. The template defaults to `localhost` so it also works when everything runs on a single machine.
@@ -23,11 +23,12 @@ sudo nano /opt/chess64/app.env
 For multi-EC2, set:
 - `FRONTEND_URL` to the **frontend** EC2 public IP/domain + `:5173`
 - `VITE_*` URLs to the **backend** EC2 public IP/domain + ports
-- `MONGODB_URL` / `REDIS_URL` to the **db** EC2 private IP/domain (preferred)
+- `MONGODB_URL` to the **db** EC2 private IP/domain (preferred)
+- `REDIS_URL` to the **backend** EC2 Redis endpoint (see below)
 
 Note: `docker run --env-file` does **not** support quoted values; keep entries unquoted like `KEY=value`.
 
-## 2) DB EC2 commands (mongo + redis)
+## 2) DB EC2 commands (mongo)
 
 ```bash
 docker volume create mongo64
@@ -35,13 +36,30 @@ docker volume create mongo64
 docker run -d --name chess64-mongo --restart unless-stopped \
   -p 27017:27017 -v mongo64:/data/db \
   mongo:7
+```
 
+## 3) Backend EC2 commands (redis + 4 processes from one image)
+
+Create a shared Docker network so the backend containers can reach Redis by container name:
+
+```bash
+docker network create chess64 || true
+```
+
+Run Redis:
+
+```bash
 docker run -d --name chess64-redis --restart unless-stopped \
+  --network chess64 \
   -p 6379:6379 \
   redis:7-alpine
 ```
 
-## 3) Backend EC2 commands (4 processes from one image)
+Set `REDIS_URL` in `/opt/chess64/app.env` to:
+
+```bash
+REDIS_URL=redis://chess64-redis:6379
+```
 
 Build once:
 
@@ -53,18 +71,21 @@ Run:
 
 ```bash
 docker run -d --name chess64-server-main --restart unless-stopped \
+  --network chess64 \
   --env-file /opt/chess64/app.env \
   -e PORT=8080 -p 8080:8080 \
   chess64-server:latest \
   npm run start:main
 
 docker run -d --name chess64-server-ws --restart unless-stopped \
+  --network chess64 \
   --env-file /opt/chess64/app.env \
   -e PORT=9090 -p 9090:9090 \
   chess64-server:latest \
   npm run start:ws
 
 docker run -d --name chess64-server-stockfish --restart unless-stopped \
+  --network chess64 \
   --env-file /opt/chess64/app.env \
   -e PORT=8081 -p 8081:8081 \
   chess64-server:latest \
@@ -72,6 +93,7 @@ docker run -d --name chess64-server-stockfish --restart unless-stopped \
 
 # databaseUpdation.js listens on 9191 internally (hardcoded), no PORT env needed.
 docker run -d --name chess64-server-dbupdates --restart unless-stopped \
+  --network chess64 \
   --env-file /opt/chess64/app.env \
   -p 9191:9191 \
   chess64-server:latest \
