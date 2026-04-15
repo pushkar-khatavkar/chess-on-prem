@@ -16,7 +16,7 @@ On **each** EC2:
 
 ```bash
 sudo mkdir -p /opt/chess64
-sudo cp deploy/ec2/app.env.example /opt/chess64/app.env
+sudo cp deploy/ec2/app.env /opt/chess64/app.env
 sudo nano /opt/chess64/app.env
 ```
 
