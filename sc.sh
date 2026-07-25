@@ -78,6 +78,9 @@ docker buildx version
 node -v
 npm -v
 
+sudo dnf install git -y
+
+
 echo ""
 echo "################################################################################"
 echo "IMPORTANT FINAL STEPS:"
@@ -85,4 +88,3 @@ echo "1. To apply the new Docker permissions, run: newgrp docker"
 echo "2. To apply the new NPM/Node variables to your terminal, run: source ~/.bashrc"
 echo "################################################################################"
 
-yum install git -y
