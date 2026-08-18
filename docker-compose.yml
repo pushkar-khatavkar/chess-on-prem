@@ -20,14 +20,18 @@ services:
       context: ./server
     container_name: chess64-server-main
     restart: unless-stopped
-    env_file:
-      - ./server/.env
     environment:
       PORT: "8080"
-      # Use PUBLIC_HOST for single-EC2 access from outside. Defaults to localhost.
-      FRONTEND_URL: "http://52.66.188.29:5173"
-      MONGODB_URL: "mongodb://mongo:27017/64"
-      REDIS_URL: "redis://redis:6379"
+      FRONTEND_URL: "http://${PUBLIC_IP}:5173"
+      MONGODB_URL: "${MONGODB_URL}"
+      REDIS_URL: "${REDIS_URL}"
+      JWT_TOKEN_SECRET: "${JWT_TOKEN_SECRET}"
+      JWT_TOKEN_SIGNUP_MAIL_SECRET: "${JWT_TOKEN_SIGNUP_MAIL_SECRET}"
+      JWT_RESET_PASSWORD_SECRET: "${JWT_RESET_PASSWORD_SECRET}"
+      NODEMAILER_MAIL: "${NODEMAILER_MAIL}"
+      NODEMAIL_APP_PASSWORD: "${NODEMAIL_APP_PASSWORD}"
+      STOCKFISH_EMAIL: "${STOCKFISH_EMAIL}"
+      STOCKFISH_PASSWORD: "${STOCKFISH_PASSWORD}"
     command: npm run start:main
     depends_on:
       - mongo
@@ -40,13 +44,12 @@ services:
       context: ./server
     container_name: chess64-server-ws
     restart: unless-stopped
-    env_file:
-      - ./server/.env
     environment:
       PORT: "9090"
-      FRONTEND_URL: "http://52.66.188.29:5173"
-      MONGODB_URL: "mongodb://mongo:27017/64"
-      REDIS_URL: "redis://redis:6379"
+      FRONTEND_URL: "http://${PUBLIC_IP}:5173"
+      MONGODB_URL: "${MONGODB_URL}"
+      REDIS_URL: "${REDIS_URL}"
+      JWT_TOKEN_SECRET: "${JWT_TOKEN_SECRET}"
     command: npm run start:ws
     depends_on:
       - mongo
@@ -59,15 +62,14 @@ services:
       context: ./server
     container_name: chess64-server-stockfish
     restart: unless-stopped
-    env_file:
-      - ./server/.env
     environment:
       PORT: "8081"
-      FRONTEND_URL: "http://52.66.188.29:5173"
-      MONGODB_URL: "mongodb://mongo:27017/64"
-      REDIS_URL: "redis://redis:6379"
-      # Optional override if you want a specific Stockfish binary:
-      # STOCKFISH_PATH: "/usr/games/stockfish"
+      FRONTEND_URL: "http://${PUBLIC_IP}:5173"
+      MONGODB_URL: "${MONGODB_URL}"
+      REDIS_URL: "${REDIS_URL}"
+      JWT_TOKEN_SECRET: "${JWT_TOKEN_SECRET}"
+      STOCKFISH_EMAIL: "${STOCKFISH_EMAIL}"
+      STOCKFISH_PASSWORD: "${STOCKFISH_PASSWORD}"
     command: npm run start:stockfish
     depends_on:
       - mongo
@@ -80,12 +82,10 @@ services:
       context: ./server
     container_name: chess64-server-dbupdates
     restart: unless-stopped
-    env_file:
-      - ./server/.env
     environment:
-      FRONTEND_URL: "http://52.66.188.29:5173"
-      MONGODB_URL: "mongodb://mongo:27017/64"
-      REDIS_URL: "redis://redis:6379"
+      FRONTEND_URL: "http://${PUBLIC_IP}:5173"
+      MONGODB_URL: "${MONGODB_URL}"
+      REDIS_URL: "${REDIS_URL}"
     command: npm run start:microservice:dbupdates
     depends_on:
       - mongo
@@ -98,13 +98,10 @@ services:
       context: ./client
     container_name: chess64-client
     restart: unless-stopped
-    env_file:
-      - ./client/.env
     environment:
-      # These URLs are used by the browser. Use PUBLIC_HOST for single-EC2 access.
-      VITE_API_URL: "http://52.66.188.29:8080"
-      VITE_GAME_SERVER_API_URL: "http://52.66.188.29:9090"
-      VITE_STOCKFISH_SERVER_API_URL: "http://52.66.188.29:8081"
+      VITE_API_URL: "http://${PUBLIC_IP}:8080"
+      VITE_GAME_SERVER_API_URL: "http://${PUBLIC_IP}:9090"
+      VITE_STOCKFISH_SERVER_API_URL: "http://${PUBLIC_IP}:8081"
     command: npm run dev -- --host 0.0.0.0 --port 5173
     depends_on:
       - server-main
